@@ -30,6 +30,9 @@ I reviewed the diff myself before committing. Things I checked:
 - An empty `name` or `email` fails validation and returns 400 before any lookup.
 - The updated user keeps its original id.
 
-Gap I noticed and left alone: validation checks that fields are truthy, not
-that they are non-empty strings, so a number or object would pass. POST has the
-same behavior, so I kept the two consistent rather than fixing only PUT.
+Gap the review found: validation only checked that fields were truthy, so a
+number or an object could reach the store as a name or email. I fixed it for
+PUT: both fields must now be non-empty strings (whitespace-only counts as empty),
+otherwise the route returns 400 `name and email must be non-empty strings`
+before calling the store. POST still uses the older truthy check, which I left
+alone because it's outside this change.
