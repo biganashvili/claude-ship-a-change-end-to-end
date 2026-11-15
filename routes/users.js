@@ -40,7 +40,7 @@ router.post("/", (req, res) => {
 // PUT /users/:id — update a user; name and email must be non-empty strings, 404 if it doesn't exist
 router.put("/:id", (req, res) => {
   const id = Number(req.params.id);
-  const { name, email } = req.body;
+  const { name, email } = req.body || {};
 
   if (!isNonEmptyString(name) || !isNonEmptyString(email)) {
     return res
