@@ -1,38 +1,44 @@
 # Notes: PUT /users/:id
 
-## The plan
-I planned the change in plan mode before writing any code. The approved plan:
-add `updateUser(id, { name, email })` to `db/store.js`, reusing `getUserById`
-and returning `undefined` when the user is missing. In `routes/users.js`, add
-`PUT /users/:id` that validates `name` and `email` (400 with the same message
-as POST), calls the store, and returns 404 when nothing was found. I approved
-the plan without changing it.
+## What was in the plan you approved, and did you edit anything before approving?
+The plan added `updateUser(id, { name, email })` to `db/store.js`, reusing
+`getUserById` and returning `undefined` when the user is missing. It added
+`PUT /users/:id` to `routes/users.js`: 400 on bad input, 404 when the user
+doesn't exist, and 200 with the updated user otherwise. `NOTES.md` was to be
+written last. I approved the plan without editing it.
 
-## Model choice
-I used Haiku 5.5 for this work. It's a small, well-scoped change with a plan
-already in place and existing patterns to copy, so a smaller, faster model was
-enough. A larger model would be worth it if the endpoint had more moving parts,
-such as partial updates or a real database.
+The plan said "non-empty strings", but the first implementation only checked
+that fields were truthy. The review caught that mismatch (see below).
 
-## Commit split
-Two commits, one per layer:
-1. `db/store.js`: the `updateUser` helper, so the data change lands on its own.
-2. `routes/users.js`: the route, which depends on the helper and reads cleanly
-   against it.
+## Which model did you choose, and why?
+Planning ran on Sonnet 5.5, and implementation ran on Haiku 5.5. Planning
+benefits from a stronger model reading the code and weighing edge cases. Once
+the plan was fixed, the work was a small change that copied existing patterns,
+so the smaller, faster model was enough.
 
-I left the `NOTES.md` commit separate so the notes can describe the finished
-code.
+## How did you split your commits, and why that way?
+There are four commits, one logical change each:
+1. `db/store.js`: the `updateUser` helper.
+2. `routes/users.js`: the `PUT /users/:id` route.
+3. `NOTES.md`: the first version of these notes.
+4. `routes/users.js` and `NOTES.md`: the validation fix from review.
 
-## What review caught
-I reviewed the diff myself before committing. Things I checked:
-- A non-numeric id (for example `/users/abc`) becomes `NaN`, which matches no
-  user, so it returns 404 as intended.
-- An empty `name` or `email` fails validation and returns 400 before any lookup.
+Each commit is one layer, so its message makes sense without the diff. The
+store comes first because the route depends on it. The review fix is its own
+commit so the feedback shows up as a separate step in history.
+
+## What did your review catch — or confirm was already fine?
+**Caught:** validation only rejected falsy values, so a number or an object
+could reach the store as a name or email. The PUT route now requires both fields
+to be non-empty strings, with whitespace-only counted as empty. Anything else
+returns 400 `name and email must be non-empty strings` before the store is
+called.
+
+**Confirmed fine:**
+- A non-numeric id (for example `/users/abc`) becomes `NaN`, matches no user,
+  and returns 404.
+- An empty field returns 400 before any lookup happens.
 - The updated user keeps its original id.
 
-Gap the review found: validation only checked that fields were truthy, so a
-number or an object could reach the store as a name or email. I fixed it for
-PUT: both fields must now be non-empty strings (whitespace-only counts as empty),
-otherwise the route returns 400 `name and email must be non-empty strings`
-before calling the store. POST still uses the older truthy check, which I left
-alone because it's outside this change.
+**Left alone:** POST still uses the older truthy check. It's outside this
+change, so I didn't touch it.
